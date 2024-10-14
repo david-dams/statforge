@@ -28,6 +28,7 @@
       border-right: 2px solid #ddd;
       background-color: #fff;
       box-shadow: 3px 0 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.5s ease;
     }
 
     /* Preview container */
@@ -37,6 +38,7 @@
       overflow-y: auto;
       background-color: #fafafa;
       box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+      transition: width 0.5s ease;
     }
 
     /* Headings */
@@ -136,7 +138,10 @@
     }
   </style>
 </head>
+
 <body>
+  <button onclick="toggleEditor()">Toggle Editor</button>
+
   <div id="editor">
     <h2>Rules Editor</h2>
     <textarea id="json-rules">
@@ -149,10 +154,27 @@
   </div>
 
   <div id="preview">
-    <h2>Character Sheet Preview</h2>
+    <h2>Character Sheet</h2>
     <div id="character-sheet"></div>
   </div>
 
+  <script>
+    function toggleEditor() {
+      var editor = document.getElementById("editor");
+      var preview = document.getElementById("preview");
+
+      // Toggle editor visibility
+      if (editor.style.display === "none") {
+        editor.style.display = "block";
+        preview.style.width = "60%";  // Revert the preview width
+      } else {
+        editor.style.display = "none";
+        preview.style.width = "100%";  // Take full width
+      }
+    }
+  </script>
+
   <script src="app.js"></script>
 </body>
+
 </html>
