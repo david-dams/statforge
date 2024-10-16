@@ -46,6 +46,7 @@ function makeInput(element) {
     const input = document.createElement("input");
     input.id = element["ID"];
     input.value = element["DEFAULT"];
+    input.setAttribute("data-active", "true");
     input.addEventListener('input', updateCharacterSheet);
     statBlock.appendChild(input);
     return statBlock;   
