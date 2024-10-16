@@ -49,7 +49,7 @@ function makeSelectBox(element) {
 
         // Loop through all options and disable / enable
         for (let i = 0; i < options.length; i++) {
-	    option.setAttribute("data-active", String(options[i].selected));
+	    options[i].setAttribute("data-active", String(options[i].selected));
         }
 
         updateCharacterSheet();
@@ -106,7 +106,7 @@ function sumAll(field){
 }
 
 function executeCode(element){
-    eval(element.dataset.code);    
+    element.textContent = eval(element.dataset.code);    
 }
 
 // Update character sheet when an input value changes
