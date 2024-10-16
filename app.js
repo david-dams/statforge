@@ -84,6 +84,5 @@ function executeCode(element) {
 }
 
 function updateCharacterSheet() {
-    const rules = JSON.parse(jsonEditor.value);
     document.querySelectorAll('[data-code]').forEach(executeCode);
 }
