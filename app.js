@@ -2,91 +2,120 @@
 const jsonEditor = document.getElementById("json-rules");
 const characterSheet = document.getElementById("character-sheet");
 const generateButton = document.getElementById("generate");
-const downloadButton = document.getElementById("download");
 
-// Generate Character Sheet
+// setup character sheet
 generateButton.addEventListener("click", () => {
-  const jsonRules = JSON.parse(jsonEditor.value);
-  generateCharacterSheet(jsonRules);
+    const jsonRules = JSON.parse(jsonEditor.value);
+    
+    generateCharacterSheet(jsonRules);
 });
 
-// externally defined value
-function generateInputField(stat, rules){
+// generate container
+function makeDiv(element){
+    const statName = element["DISPLAY"];    
     const statBlock = document.createElement("div");
-    statBlock.classList.add("stat");    
     const label = document.createElement("label");
-    label.innerHTML = `${stat.charAt(0).toUpperCase() + stat.slice(1)}: `;
+    
+    label.innerHTML = `${statName.charAt(0).toUpperCase() + statName.slice(1)}: `;
+    statBlock.appendChild(label);
+    
+    return statBlock;
+}
 
+// collection of stuff
+function makeSelectBox(element) {
+    const statBlock = makeDiv(element);
+    const select = document.createElement("select");
+
+    select.id = element["DISPLAY"];
+    Object.keys(element["OPTIONS"]).forEach((optionValue) => {
+        const option = document.createElement("option");
+
+        // Add "content attribute"
+        option.setAttribute("data-content", JSON.stringify(element["OPTIONS"][optionValue]));
+        option.value = optionValue;
+        option.text = optionValue;
+
+        // Set the default selected option and make it "active"
+	option.selected = (optionValue === element["DEFAULT"]);
+	option.setAttribute("data-active", String(option.selected));
+	
+        select.appendChild(option);
+    });
+
+    // Event listener to update the character sheet when the value changes
+    select.addEventListener('change', function () {
+        const options = select.options;
+
+        // Loop through all options and disable / enable
+        for (let i = 0; i < options.length; i++) {
+	    option.setAttribute("data-active", String(options[i].selected));
+        }
+
+        updateCharacterSheet();
+    });
+
+    statBlock.appendChild(select);
+    return statBlock;
+}
+
+function makeInputBox(element){
+    const statBlock = makeDiv(element);    
     const input = document.createElement("input");
-    input.type = "number";
-    input.id = stat;
-    input.value = 0;
     
-    input.addEventListener('input', function () {updateCharacterSheet(rules);});
-
-    statBlock.appendChild(label);
+    input.id = element["DISPLAY"];
+    input.value = element["DEFAULT"];
+    // TODO: uff; rebuild entire sheet if anything changes
+    input.addEventListener('input', function () {updateCharacterSheet();});
     statBlock.appendChild(input);
-
-    return statBlock;
+    
+    return statBlock;   
 }
 
-// derived value
-function generateOutputField(stat, rules){    
-    const statBlock = document.createElement("div");
-    statBlock.classList.add("stat");    
-    const label = document.createElement("label");
-    label.innerHTML = `${stat.charAt(0).toUpperCase() + stat.slice(1)}: `;
+function makeDerivedBox(element){
+    const statBlock = makeDiv(element);    
+    const derived = document.createElement("span");
     
-    const readOnlyField = document.createElement("span");
-    readOnlyField.id = stat;
+    derived.id = element["DISPLAY"];
+    derived.textContent = "";
+    derived.setAttribute("data-code", element["VALUE"]); 
+    statBlock.appendChild(derived);
     
-    readOnlyField.classList.add("readonly");
-    readOnlyField.innerHTML = ""; 
-    statBlock.appendChild(label);
-    statBlock.appendChild(readOnlyField);
-    
-    return statBlock;
+    return statBlock;   
 }
 
-const templates = [generateInputField, generateOutputField];
+const funcDict = {"input" : makeInputBox, "choice" : makeSelectBox, "derived" : makeDerivedBox};
 
 function generateCharacterSheet(rules) {
-  characterSheet.innerHTML = ""; // Clear current sheet
+    // Clear current sheet
+    characterSheet.innerHTML = ""; 
 
-  Object.keys(rules).forEach((stat) => {      
-      // Get the HTML template for the stat
-      const htmlTemplate = rules[stat].html;
-      const statBlock = templates[htmlTemplate](stat, rules);
-      characterSheet.appendChild(statBlock);    
-  });
+    // New sheet is html-ified list
+    rules["rules"].forEach( (element) => {
+	const child = funcDict[element["KIND"]](element);
+	characterSheet.appendChild(child);    
+    });
 }
 
-// Calculate derived stat
-function calculateStat(rules, stat, value) {
-    const rule = rules[stat].rule;
-    
-    if (Array.isArray(rule)) {	
-	const values = rule.slice(1).map(val => {
-	    return document.getElementById(val).value;	    
-	}).join(',');
-	
-	const evalString = "(" + rule[0] + ")(" + values + ")";
-	
-	console.log(evalString);
-	
-	return eval(evalString);
-    }
-    return value;
+function sumAll(field){
+    const allActive = document.querySelectorAll('[data-active="true"]');
+    return Array.from(allActive)
+	.filter(element => JSON.parse(element.dataset.content)[field] !== undefined)
+	.map(element => JSON.parse(element.dataset.content)[field])
+	.reduce((sum, value) => sum + Number(value), 0);
+}
+
+function executeCode(element){
+    eval(element.dataset.code);    
 }
 
 // Update character sheet when an input value changes
-function updateCharacterSheet(rules) {
-    Object.keys(rules).forEach((stat) => {
-	const htmlTemplate = rules[stat].html;
-	if (htmlTemplate === 1) {
-	    const derivedValue = calculateStat(rules, stat, 0);
-	    console.log(stat);
-	    document.getElementById(stat).innerHTML = derivedValue;
-	}
+function updateCharacterSheet() {
+    const rules = JSON.parse(jsonEditor.value);
+    const allDerived = document.querySelectorAll('[data-code]');
+    
+    // Log each element's data-code value
+    allDerived.forEach((element) => {
+	executeCode(element);
     });
 }
