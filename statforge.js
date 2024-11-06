@@ -1,9 +1,8 @@
-// entities are non-leaf keys. components are leaf-keys. systems are indicated per entity by a reserved key.
+// components (entities) are (non-)leaf keys. systems are indicated by reserved kewords starting with "_".
 
 const DropDown = "Dropdown";
 const StringInput = "StringInput";
 const StringOutput = "StringOutput";
-
 const rules = {
     Classes : {Wizard : {Points : 10},
 	       Warrior : {Points : 2},
@@ -52,12 +51,22 @@ function rulesToRep(rules) {
     return rep;
 }
 
-// console.log(rules);
-console.log(rulesToRep(rules));
-
-// rep => rules
-function repToRules(){
+function repToRules(rep){
+    return Object.entries(rep).reduce( (acc, [component, entityValue ]) => {
+	return Object.entries(entityValue).reduce( (acc2, [entity, value]) => {
+	    const entityKey = entity.split(".");
+	    const entityNested = entityKey.reduceRight((nestedAcc, entityPart) => ({ [entityPart] : nestedAcc }), {[component] : value});
+	    return {...acc2, ...entityNested};
+	}, acc);
+    }, {});
 }
+
+console.log(rules);
+const rep = rulesToRep(rules);
+const rules2 = repToRules(rep);
+console.log(rules2);
+console.log(rules2);
+
 
 // add new / modify old DOM elements
 function render(){
