@@ -115,7 +115,6 @@ function sumActive(state, component) {
         if (!Array.isArray(entities)) return total; // TODO: can we assume entity is array element?
 
         const componentSum = entities.reduce((entityTotal, entity) => {
-	    console.log(component, entity, state[component]?.[entity]);
             return entityTotal + (state[component]?.[entity] || 0);
         }, 0);
 
@@ -124,7 +123,7 @@ function sumActive(state, component) {
 }
 
 // updates derived entities === "_data" fields of all entities whose "_value" is not in processDispatchTable
-function evolve(state){
+function updateData(state){
     
     // TODO: uff
     const inputs = new Set(Object.keys(userInputTable));
@@ -141,21 +140,29 @@ function evolve(state){
 
     const newData = {...state._data, ...update};
     
-    // TODO: return update separately for rendering
+    // TODO: return updates separately for rendering
     return {...state, _data : newData};
 }
 
 // returns updated state
 function newStateFromInput(state, input){
     const value = state._value[input.id] ?? "";
-    const updateFunc = userInputTable[value];
-
+    const updateInput = userInputTable[value];
     
-    return evolve(updateFunc(state, input.id, input.content));
+    return updateData(updateInput(state, input.id, input.content));
 }
 
 // returns violations of a state => checks for violation in all _requires keywords
 function stateViolations(state){
-    
-    return;
+    return Object.entries(state._requires).reduce( (acc, [entity, requires]) => {	
+	return acc + Object.entries(state._data).reduce( (acc, [key, value]) => {
+	    if (!Array.isArray(value)) return acc + ""; // TODO: can we assume entity is array element?
+	    if (value.includes(entity)){
+		if (!eval(requires)){
+		    return acc + requires;
+		};
+	    }
+	    return acc + "";
+	}, "");
+    }, "" );
 }
