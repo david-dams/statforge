@@ -1,43 +1,49 @@
-// components (entities) are (non-)leaf keys. systems are indicated by reserved kewords starting with "_".
-
+// example input: components (entities) are (non-)leaf keys. systems are indicated by reserved kewords starting with "_".
 const DropDown = "Dropdown";
 const StringInput = "StringInput";
 const StringOutput = "StringOutput";
 const rules = {
-    Classes : {Wizard : {Points : 10},
-	       Warrior : {Points : 2},
-	       _Layout : DropDown,
-	       _Value : "SingleSelect",
-	       _Data : [],
+    Classes : {Wizard : {Points : 10, MagicPower : 20},
+	       Warrior : {Points : 2, MagicPower : 2},
+	       _layout : DropDown, // rendering
+	       _value : "SingleSelect", // kind of field: (type of) input of value of output
+	       _data : ['Classes.Wizard'], // active / displayable data
 	      },
-    Spells : {Fireball : {MagicPower : -10, _Requires : "get('Classes.Selected') == 'Wizard'"},
+    Spells : {Fireball : {MagicPower : -10, _Requires : "state._data['Classes'] === 'Wizard'"},
 	      Whirlwind : {MagicPower : -2},	     
-	      _Layout : DropDown,
-	      _Value : "MultiSelect",
-	      _Data : []},
+	      _layout : DropDown,
+	      _value : "MultiSelect",
+	      _data : []},
     Items : {Axe : {Gold : 10, Integrity : 15},
 	     Sword : {Gold : 15, Integrity : 15},
-	     _Layout : DropDown,
-	     _Value : "MultiSelect",
-	     _Data : []},
-    Name : {_Layout : StringInput,
-	    _Data : "",
-	    _Value : "Input"},
-    MagicPower : {_Layout : StringOutput,
-		  _Value : "10 - getAllActive('MagicPower')",
-		  _Data : "" },
-    Points : {_Layout : StringOutput,
-	      _Value : "10 - getAllActive('Points')",
-	      _Data : ""}
+	     _layout : DropDown,
+	     _value : "MultiSelect",
+	     _data : []},
+    Name : {_layout : StringInput,
+	    _data : "",
+	    _value : "Input"},
+    MagicPower : {_layout : StringOutput,
+		  _value : "sumActive(state, 'MagicPower')",
+		  _data : "" },
+    Points : {_layout : StringOutput,
+	      _value : "sumActive(state, 'Points')",
+	      _data : ""}
 };
 
-// rules => rep[component][entity]
+
+/**
+ * Converts a rules dict to a two-fold nested form dict, e.g. {bar : {baz : {foo : 1}}} => {foo : {bar.baz : 1}} 
+ *
+ * @param {object} rules
+ * @returns {object} rep
+ */
 function rulesToRep(rules) {
+    // return value, modified in-place
     const rep = {};
 
-    function inner(obj, currentKey) {
-        for (const [key, value] of Object.entries(obj)) {
-            const newKey = currentKey ? `${currentKey}.${key}` : key;
+    function inner(rulesSlice, currentKey) {
+        for (const [key, value] of Object.entries(rulesSlice)) {
+	    const newKey = currentKey ? `${currentKey}.${key}` : key;
             if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
                 inner(value, newKey);
             } else {
@@ -51,7 +57,14 @@ function rulesToRep(rules) {
     return rep;
 }
 
+/**
+ * Converts a two-folded nested form dict to a rules dict, e.g. {foo : {bar.baz : 1}} => {bar : {baz : {foo : 1}}}
+ *
+ * @param {object} rep
+ * @returns {object} rules
+ */
 function repToRules(rep){
+    // outer level is indexed by components, inner level is indexed by nested entities: strings separated by dots, e.g. bar.baz
     return Object.entries(rep).reduce( (acc, [component, entityValue ]) => {
 	return Object.entries(entityValue).reduce( (acc2, [entity, value]) => {
 	    const entityKey = entity.split(".");
@@ -61,45 +74,76 @@ function repToRules(rep){
     }, {});
 }
 
-console.log(rules);
-const rep = rulesToRep(rules);
-const rules2 = repToRules(rep);
-console.log(rules2);
-console.log(rules2);
-
-
-// add new / modify old DOM elements
-function render(){
-
+// appends to _data
+function multiSelect(state, id, content){
+    return {
+        ...state,
+        [id]: [...state[id], ...content]
+    };
 }
 
-// check if the given input mutation is legal under constraints given in rep, notify about violation
-function isLegal(){
-
+// updates _data
+function singleSelect(state, id, content){
+    return {
+        ...state,
+        [id]: [content]
+    };
 }
 
-// update the derived values from legal input, return object containing only changes and entire changed object  
-function update(){
-
+// updates _data
+function input(state, id, content){
+    return {
+        ...state,
+        [id]: content
+    };
 }
 
-// // initialization
-// var rep = getRep(rules); // flatten the nested rules dict into the "matrix" representation
-// render(rep); // render the matrix
+// maps fields to user input to decide which function to call on which input
+const userInputTable = {
+    "MultiSelect" : multiSelect,
+    "SingleSelect" : singleSelect,
+    "Input" : input,
+};
 
-// // main loop
-// while (input = awaitInput()){ // get new input
+// sum all values of active components => for all entities in _data, sum "component" value
+function sumActive(state, component) {
+    return Object.values(state._data).reduce((total, entities) => {
+        if (!Array.isArray(entities)) return total; // TODO: can we assume entity is array element?
+
+        const componentSum = entities.reduce((entityTotal, entity) => {
+            return entityTotal + (state[component]?.[entity] || 0);
+        }, 0);
+
+        return total + componentSum;
+    }, 0);
+}
+
+// updates derived entities === "_data" fields of all entities whose "_value" is not in processDispatchTable
+function evolve(state){
     
-//     if (isLegal(input, rep)){ // only do something for a legal move
-	
-// 	rep, rep_updated_only = computeUpdated(input, rep); // update the entire matrix and get only the portion of it that is new
-	
-// 	render(rep_updated_only);  // render the updates
-//     }
+    // TODO: uff
+    const inputs = new Set(Object.keys(userInputTable));
+    const isOutput = (value) => {return !inputs.has(value);};
+    
+    return Object.entries(state._value).reduce((acc, [key, value]) => {
+	if (isOutput(value)) {
+	    
+	    // TODO: uff
+	    acc[key] = eval(value);
+	}
+	return acc;
+    }, {});
+}
 
-//     if (input == BREAK){
+// returns updated state
+function newStateFromInput(state, input){
+    const value = state._value[input.id] ?? "";
+    const updateFunc = userInputTable[value];
+    
+    return evolve(updateFunc(state, input.id, input.content));
+}
 
-// 	download(getRules(rep)); // convert the matrix back to a nested dict, which is then downloaded
-// 	break;
-//     }
-// }
+// returns violations of a state (empty for valid state)
+function stateViolations(){
+    return;
+}
