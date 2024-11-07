@@ -1,3 +1,8 @@
+// TODO:
+// eval => DSL
+// rewrite violations detection: pass updated fields only OR filter for entities with requirements OR introduce extra field with active requirements
+// performance: pass around only _data subdict
+
 // example input: components (entities) are (non-)leaf keys. systems are indicated by reserved kewords starting with "_".
 const DropDown = "Dropdown";
 const StringInput = "StringInput";
@@ -9,12 +14,12 @@ const rules = {
 	       _value : "SingleSelect", // kind of field: (type of) input of value of output
 	       _data : [], // active / displayable data
 	      },
-    Spells : {Fireball : {MagicPower : -10, _requires : "state._data['Classes'] === 'Wizard'"},
+    Spells : {Fireball : {MagicPower : -10, _requires : "state._data['Classes'].includes('Classes.Wizard')"},
 	      Whirlwind : {MagicPower : -2},	     
 	      _layout : DropDown,
 	      _value : "MultiSelect",
 	      _data : []},
-    Items : {Axe : {Gold : 10, Integrity : 15},
+    Items : {Axe : {Gold : 10, Integrity : 15, _requires : "state._data['Items'].includes('Items.Sword')"},
 	     Sword : {Gold : 15, Integrity : 15},
 	     _layout : DropDown,
 	     _value : "MultiSelect",
@@ -166,3 +171,20 @@ function stateViolations(state){
 	}, "");
     }, "" );
 }
+
+// state = newStateFromInput(state, addAxe);
+// state = newStateFromInput(state, addSword);
+const rep = rulesToRep(rules);
+const addWizard = {id : "Classes", content : "Classes.Wizard"};
+const addWarrior = {id : "Classes", content : "Classes.Warrior"};
+const addAxe = {id : "Items", content : "Items.Axe"};
+const addSword = {id : "Items", content : "Items.Sword"};
+const addFireball = {id : "Spells", content : "Spells.Fireball"};
+
+let state = newStateFromInput(rep, addWarrior);
+state = newStateFromInput(state, addFireball);
+state = newStateFromInput(state, addAxe);
+
+console.log(state);
+const violations = stateViolations(state);
+console.log(violations);
