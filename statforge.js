@@ -85,18 +85,20 @@ function multiSelect(state, id, content){
 
 // updates _data
 function singleSelect(state, id, content){
-    const newData = {...state._data, [id] : content};
+    const newData = {...state._data, [id] : [content]};
     return {
         ...state,
         _data : newData
     };
 }
 
+// TODO uff, DRY
 // updates _data
 function input(state, id, content){
+    const newData = {...state._data, [id] : content};
     return {
         ...state,
-        [id]: content
+        _data : newData
     };
 }
 
@@ -113,6 +115,7 @@ function sumActive(state, component) {
         if (!Array.isArray(entities)) return total; // TODO: can we assume entity is array element?
 
         const componentSum = entities.reduce((entityTotal, entity) => {
+	    console.log(component, entity, state[component]?.[entity]);
             return entityTotal + (state[component]?.[entity] || 0);
         }, 0);
 
@@ -128,15 +131,18 @@ function evolve(state){
     const isOutput = (value) => {return !inputs.has(value);};
     
     const update = Object.entries(state._value).reduce((acc, [key, value]) => {
-	if (isOutput(value)) {
-	    
+	
+	if (isOutput(value)) {	    
 	    // TODO: uff
 	    acc[key] = eval(value);
 	}
 	return acc;
     }, {});
 
-    return {...state, ...update};
+    const newData = {...state._data, ...update};
+    
+    // TODO: return update separately for rendering
+    return {...state, _data : newData};
 }
 
 // returns updated state
@@ -150,5 +156,6 @@ function newStateFromInput(state, input){
 
 // returns violations of a state => checks for violation in all _requires keywords
 function stateViolations(state){
+    
     return;
 }
