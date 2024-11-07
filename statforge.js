@@ -7,9 +7,9 @@ const rules = {
 	       Warrior : {Points : 2, MagicPower : 2},
 	       _layout : DropDown, // rendering
 	       _value : "SingleSelect", // kind of field: (type of) input of value of output
-	       _data : ['Classes.Wizard'], // active / displayable data
+	       _data : [], // active / displayable data
 	      },
-    Spells : {Fireball : {MagicPower : -10, _Requires : "state._data['Classes'] === 'Wizard'"},
+    Spells : {Fireball : {MagicPower : -10, _requires : "state._data['Classes'] === 'Wizard'"},
 	      Whirlwind : {MagicPower : -2},	     
 	      _layout : DropDown,
 	      _value : "MultiSelect",
@@ -29,7 +29,6 @@ const rules = {
 	      _value : "sumActive(state, 'Points')",
 	      _data : ""}
 };
-
 
 /**
  * Converts a rules dict to a two-fold nested form dict, e.g. {bar : {baz : {foo : 1}}} => {foo : {bar.baz : 1}} 
@@ -76,17 +75,20 @@ function repToRules(rep){
 
 // appends to _data
 function multiSelect(state, id, content){
+    const newVal = state._data[id].concat(content);
+    const newData = {...state._data, [id] : newVal};
     return {
         ...state,
-        [id]: [...state[id], ...content]
+        _data : newData
     };
 }
 
 // updates _data
 function singleSelect(state, id, content){
+    const newData = {...state._data, [id] : content};
     return {
         ...state,
-        [id]: [content]
+        _data : newData
     };
 }
 
@@ -125,7 +127,7 @@ function evolve(state){
     const inputs = new Set(Object.keys(userInputTable));
     const isOutput = (value) => {return !inputs.has(value);};
     
-    return Object.entries(state._value).reduce((acc, [key, value]) => {
+    const update = Object.entries(state._value).reduce((acc, [key, value]) => {
 	if (isOutput(value)) {
 	    
 	    // TODO: uff
@@ -133,17 +135,20 @@ function evolve(state){
 	}
 	return acc;
     }, {});
+
+    return {...state, ...update};
 }
 
 // returns updated state
 function newStateFromInput(state, input){
     const value = state._value[input.id] ?? "";
     const updateFunc = userInputTable[value];
+
     
     return evolve(updateFunc(state, input.id, input.content));
 }
 
-// returns violations of a state (empty for valid state)
-function stateViolations(){
+// returns violations of a state => checks for violation in all _requires keywords
+function stateViolations(state){
     return;
 }
