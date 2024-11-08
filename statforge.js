@@ -1,47 +1,46 @@
 // TODO:
+// rendering
+// deselect!
+// work around or implement this case: updates should be executed recursively if there are multiple derived values, e.g. something adds an item which adds an item, ...
 // eval => DSL
-// rewrite violations detection: pass updated fields only OR filter for entities with requirements OR introduce extra field with active requirements
-// performance: pass around only _data subdict
 
 // example input: components (entities) are (non-)leaf keys. systems are indicated by reserved kewords starting with "_".
-const DropDown = "Dropdown";
-const StringInput = "StringInput";
-const StringOutput = "StringOutput";
 const rules = {
     Classes : {Wizard : {Points : 10, MagicPower : 20},
 	       Warrior : {Points : 2, MagicPower : 2},
-	       _layout : DropDown, // rendering
-	       _value : "SingleSelect", // kind of field: (type of) input of value of output
-	       _data : [], // active / displayable data
+	       _kind : "SingleSelect", // kind of field: (type of) input of value of output
+	       _active : true,
 	      },
-    Spells : {Fireball : {MagicPower : -10, _requires : "state._data['Classes'].includes('Classes.Wizard')"},
+    Spells : {Fireball : {MagicPower : -10, _requires : "state._active['Classes.Wizard']===true"},
 	      Whirlwind : {MagicPower : -2},	     
-	      _layout : DropDown,
-	      _value : "MultiSelect",
-	      _data : []},
-    Items : {Axe : {Gold : 10, Integrity : 15, _requires : "state._data['Items'].includes('Items.Sword')"},
+	      _kind : "MultiSelect",
+	      _active : true
+	     },
+    Items : {Axe : {Gold : 10, Integrity : 15, _requires : "state._active['Items.Sword'] === true"},
 	     Sword : {Gold : 15, Integrity : 15},
-	     _layout : DropDown,
-	     _value : "MultiSelect",
-	     _data : []},
-    Name : {_layout : StringInput,
-	    _data : "",
-	    _value : "Input"},
-    MagicPower : {_layout : StringOutput,
-		  _value : "sumActive(state, 'MagicPower')",
-		  _data : "" },
-    Points : {_layout : StringOutput,
-	      _value : "sumActive(state, 'Points')",
-	      _data : ""}
+	     _kind : "MultiSelect",
+	     _active : true},
+    Name : {_active : true,
+	    _kind : "Input",
+	    _value : "",
+	   },
+    MagicPower : {_derivation : "sumActive(state, 'MagicPower')",
+		  _kind : "Output",
+		  _active : true,
+		  _value : "" },
+    Points : {_derivation : "sumActive(state, 'Points')",
+	      _kind : "Output",
+	      _active : true,
+	      _value : "" }
 };
 
 /**
  * Converts a rules dict to a two-fold nested form dict, e.g. {bar : {baz : {foo : 1}}} => {foo : {bar.baz : 1}} 
  *
  * @param {object} rules
- * @returns {object} rep
+ * @returns {object} state
  */
-function rulesToRep(rules) {
+function rulesToState(rules) {
     // return value, modified in-place
     const rep = {};
 
@@ -61,50 +60,49 @@ function rulesToRep(rules) {
     return rep;
 }
 
+function deepMerge(target, source) {
+    for (const key in source) {
+        if (source[key] instanceof Object && key in target) {
+            Object.assign(source[key], deepMerge(target[key], source[key]));
+        }
+    }
+    return { ...target, ...source };
+}
+
 /**
  * Converts a two-folded nested form dict to a rules dict, e.g. {foo : {bar.baz : 1}} => {bar : {baz : {foo : 1}}}
  *
- * @param {object} rep
+ * @param {object} state
  * @returns {object} rules
  */
-function repToRules(rep){
+function stateToRules(state){
     // outer level is indexed by components, inner level is indexed by nested entities: strings separated by dots, e.g. bar.baz
-    return Object.entries(rep).reduce( (acc, [component, entityValue ]) => {
+    return Object.entries(state).reduce( (acc, [component, entityValue ]) => {
 	return Object.entries(entityValue).reduce( (acc2, [entity, value]) => {
 	    const entityKey = entity.split(".");
 	    const entityNested = entityKey.reduceRight((nestedAcc, entityPart) => ({ [entityPart] : nestedAcc }), {[component] : value});
-	    return {...acc2, ...entityNested};
+	    return deepMerge(acc2, entityNested);
 	}, acc);
     }, {});
 }
 
 // appends to _data
-function multiSelect(state, id, content){
-    const newVal = state._data[id].concat(content);
-    const newData = {...state._data, [id] : newVal};
-    return {
-        ...state,
-        _data : newData
-    };
+function multiSelect(state, input){
+    state._active[input.selection] = input.content;
+    return state;
 }
 
 // updates _data
-function singleSelect(state, id, content){
-    const newData = {...state._data, [id] : [content]};
-    return {
-        ...state,
-        _data : newData
-    };
+function singleSelect(state, input){
+    state._active[input.selection] = input.content;
+    return state;
 }
 
 // TODO uff, DRY
 // updates _data
-function input(state, id, content){
-    const newData = {...state._data, [id] : content};
-    return {
-        ...state,
-        _data : newData
-    };
+function input(state, input){
+    state._active[input.selection] = input.content;
+    return state;
 }
 
 // maps fields to user input to decide which function to call on which input
@@ -114,77 +112,41 @@ const userInputTable = {
     "Input" : input,
 };
 
-// sum all values of active components => for all entities in _data, sum "component" value
+// sum all active components
 function sumActive(state, component) {
-    return Object.values(state._data).reduce((total, entities) => {
-        if (!Array.isArray(entities)) return total; // TODO: can we assume entity is array element?
-
-        const componentSum = entities.reduce((entityTotal, entity) => {
-            return entityTotal + (state[component]?.[entity] || 0);
-        }, 0);
-
-        return total + componentSum;
+    return Object.entries(state._active).reduce((total, [entity, isActive]) => {
+	if (!isActive) return total;
+        return total + (state[component]?.[entity] || 0);
     }, 0);
 }
 
 // updates derived entities === "_data" fields of all entities whose "_value" is not in processDispatchTable
-function updateData(state){
-    
-    // TODO: uff
-    const inputs = new Set(Object.keys(userInputTable));
-    const isOutput = (value) => {return !inputs.has(value);};
-    
-    const update = Object.entries(state._value).reduce((acc, [key, value]) => {
-	
-	if (isOutput(value)) {	    
-	    // TODO: uff
-	    acc[key] = eval(value);
-	}
+function update(state){
+        
+    const update = Object.entries(state._derivation).reduce((acc, [key, value]) => {
+	acc[key] = eval(value);
 	return acc;
     }, {});
 
-    const newData = {...state._data, ...update};
+    const newValue = {...state._value, ...update};
     
     // TODO: return updates separately for rendering
-    return {...state, _data : newData};
+    return {...state, _value : newValue};
 }
 
 // returns updated state
 function newStateFromInput(state, input){
-    const value = state._value[input.id] ?? "";
+    const value = state._kind[input.id] ?? "";
     const updateInput = userInputTable[value];
     
-    return updateData(updateInput(state, input.id, input.content));
+    return update(updateInput(state, input));
 }
 
 // returns violations of a state => checks for violation in all _requires keywords
 function stateViolations(state){
-    return Object.entries(state._requires).reduce( (acc, [entity, requires]) => {	
-	return acc + Object.entries(state._data).reduce( (acc, [key, value]) => {
-	    if (!Array.isArray(value)) return acc + ""; // TODO: can we assume entity is array element?
-	    if (value.includes(entity)){
-		if (!eval(requires)){
-		    return acc + requires;
-		};
-	    }
-	    return acc + "";
-	}, "");
-    }, "" );
+    return Object.entries(state._active).reduce( (acc, [entity, isActive]) => {
+	const requires = state._requires[entity] ?? "";
+	if (eval(requires) && requires !== "") return acc;
+	return acc + requires;
+    }, "");
 }
-
-// state = newStateFromInput(state, addAxe);
-// state = newStateFromInput(state, addSword);
-const rep = rulesToRep(rules);
-const addWizard = {id : "Classes", content : "Classes.Wizard"};
-const addWarrior = {id : "Classes", content : "Classes.Warrior"};
-const addAxe = {id : "Items", content : "Items.Axe"};
-const addSword = {id : "Items", content : "Items.Sword"};
-const addFireball = {id : "Spells", content : "Spells.Fireball"};
-
-let state = newStateFromInput(rep, addWarrior);
-state = newStateFromInput(state, addFireball);
-state = newStateFromInput(state, addAxe);
-
-console.log(state);
-const violations = stateViolations(state);
-console.log(violations);
