@@ -60,14 +60,6 @@ function rulesToState(rules) {
     return rep;
 }
 
-function deepMerge(target, source) {
-    for (const key in source) {
-        if (source[key] instanceof Object && key in target) {
-            Object.assign(source[key], deepMerge(target[key], source[key]));
-        }
-    }
-    return { ...target, ...source };
-}
 
 /**
  * Converts a two-folded nested form dict to a rules dict, e.g. {foo : {bar.baz : 1}} => {bar : {baz : {foo : 1}}}
@@ -84,6 +76,16 @@ function stateToRules(state){
 	    return deepMerge(acc2, entityNested);
 	}, acc);
     }, {});
+}
+
+// helper function to perform nested dict merge
+function deepMerge(target, source) {
+    for (const key in source) {
+        if (source[key] instanceof Object && key in target) {
+            Object.assign(source[key], deepMerge(target[key], source[key]));
+        }
+    }
+    return { ...target, ...source };
 }
 
 // appends to _data
@@ -121,16 +123,14 @@ function sumActive(state, component) {
 }
 
 // updates derived entities === "_data" fields of all entities whose "_value" is not in processDispatchTable
-function update(state){
-        
+function update(state){        
     const update = Object.entries(state._derivation).reduce((acc, [key, value]) => {
 	acc[key] = eval(value);
 	return acc;
     }, {});
 
-    const newValue = {...state._value, ...update};
-    
     // TODO: return updates separately for rendering
+    const newValue = {...state._value, ...update};
     return {...state, _value : newValue};
 }
 
@@ -149,4 +149,111 @@ function stateViolations(state){
 	if (eval(requires) && requires !== "") return acc;
 	return acc + requires;
     }, "");
+}
+
+// maps fields to user input to decide which function to call on which input
+const kindRenderTable = {
+    "MultiSelect" : renderMultiSelect,
+    "SingleSelect" : renderSingleSelect,
+    "Input" : renderInput,
+};
+
+function getChildren(entity, state){
+    const length = entity.length;
+    const ret  = new Set(Object.entries(state).reduce( (acc, [component, value]) => {
+	return acc.concat(
+	    Object.keys(value).filter( (subEntity) => {return subEntity.length > length && entity === subEntity.slice(0, length);})
+	);
+    }, []));
+    return [... ret];
+}
+
+function renderSingleSelect(entity, state) {
+    let selectElement = document.getElementById(entity);
+    if (!selectElement) {
+        selectElement = document.createElement("select");
+        selectElement.id = entity;
+        const children = getChildren(entity, state);
+
+        children.some(child => {
+            const childKind = state._kind[child];
+            if (childKind) {
+                kindRenderTable[childKind](child, state);
+                return true;
+            }
+
+            const option = document.createElement("option");
+            option.textContent = child;
+            option.value = child;
+
+            if (state._active[child] === true) {
+                option.selected = true;
+            }
+
+            selectElement.appendChild(option);
+        });
+
+        document.body.appendChild(selectElement);  // or append it to a specific container
+    }
+}
+
+function renderMultiSelect(entity, state) {
+    let container = document.getElementById(entity);
+    if (!container) {
+        container = document.createElement("div");
+        container.id = entity;
+        const children = getChildren(entity, state);
+
+        children.forEach(child => {
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.id = child;
+            checkbox.value = child;
+            checkbox.checked = state._active[child] === true;
+
+            const label = document.createElement("label");
+            label.htmlFor = checkbox.id;
+            label.textContent = child;
+
+            container.appendChild(checkbox);
+            container.appendChild(label);
+        });
+
+        document.body.appendChild(container);  // or append it to a specific container
+    }
+}
+
+function renderOutput(entity, text) {
+    let outputElement = document.getElementById(entity);
+    if (!outputElement) {
+        outputElement = document.createElement("p");
+        outputElement.id = entity;
+        outputElement.textContent = text;
+
+        document.body.appendChild(outputElement);  // or append it to a specific container
+    } else {
+        outputElement.textContent = text;  // Update text if it already exists
+    }
+}
+
+function renderInput(entity, defaultValue = "") {
+    let inputElement = document.getElementById(entity);
+    if (!inputElement) {
+        inputElement = document.createElement("input");
+        inputElement.id = entity;
+        inputElement.type = "text";
+        inputElement.value = defaultValue;
+
+        document.body.appendChild(inputElement);  // or append it to a specific container
+    } else {
+        inputElement.value = defaultValue;  // Update value if it already exists
+    }
+}
+
+// computes new HTML
+function render(state){
+    Object.entries(state._kind).forEach( ([entity, kind]) => {
+	const func  = kindRenderTable?.[kind];
+	if (func) func(entity, state);	
+    });
 }
