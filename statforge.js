@@ -22,7 +22,7 @@ const rules = {
 	     _active : true},
     Name : {_active : true,
 	    _kind : "Input",
-	    _value : "",
+	    _value : ""
 	   },
     MagicPower : {_derivation : "sumActive(state, 'MagicPower')",
 		  _kind : "Output",
@@ -156,6 +156,8 @@ const kindRenderTable = {
     "MultiSelect" : renderMultiSelect,
     "SingleSelect" : renderSingleSelect,
     "Input" : renderInput,
+    "Output" : renderOutput,
+
 };
 
 function getChildren(entity, state){
@@ -223,31 +225,39 @@ function renderMultiSelect(entity, state) {
     }
 }
 
-function renderOutput(entity, text) {
+function renderOutput(entity, state) {
     let outputElement = document.getElementById(entity);
     if (!outputElement) {
+	const labelElement = document.createElement("label");
+        labelElement.innerText = `${entity}: `;
+        labelElement.setAttribute("for", entity);	
+	
         outputElement = document.createElement("p");
         outputElement.id = entity;
-        outputElement.textContent = text;
+        outputElement.textContent = state._value?.[entity];
+	console.log(entity);
 
         document.body.appendChild(outputElement);  // or append it to a specific container
-    } else {
-        outputElement.textContent = text;  // Update text if it already exists
+	document.body.appendChild(labelElement);  // Append label first
     }
 }
 
-function renderInput(entity, defaultValue = "") {
+function renderInput(entity, state) {
     let inputElement = document.getElementById(entity);
     if (!inputElement) {
+	const labelElement = document.createElement("label");
+        labelElement.innerText = `${entity}: `;
+        labelElement.setAttribute("for", entity);	
+	
         inputElement = document.createElement("input");
         inputElement.id = entity;
         inputElement.type = "text";
-        inputElement.value = defaultValue;
+        inputElement.value = state._value?.[entity];
 
+	document.body.appendChild(labelElement);  // Append label first
         document.body.appendChild(inputElement);  // or append it to a specific container
-    } else {
-        inputElement.value = defaultValue;  // Update value if it already exists
-    }
+
+    } 
 }
 
 // computes new HTML
@@ -257,3 +267,68 @@ function render(state){
 	if (func) func(entity, state);	
     });
 }
+
+function setup(){
+    const state = rulesToState(rules);
+    render(state);
+}
+
+const { JSDOM } = require("jsdom");
+
+// Load an HTML structure
+const dom = new JSDOM(`
+  <!DOCTYPE html>
+  <html>
+    <body>
+      <div id="container">
+        <p class="text">Hello, World!</p>
+      </div>
+    </body>
+  </html>
+`);
+
+// Access and manipulate DOM elements
+// const document = dom.window.document;
+// const container = document.getElementById("container");
+// const textElement = container.querySelector(".text");
+
+// const state = rulesToState(rules);
+// render(state);
+
+// const classes = document.getElementById("Classes");
+// console.log(classes);
+
+// const allElements = document.getElementsByTagName("*");
+
+// // Filter elements that have an ID attribute and collect their IDs
+// const allIds = Array.from(allElements)
+//   .filter(element => element.id) // Keep elements with a non-empty ID
+//   .map(element => element.id);   // Map to the ID values
+
+// console.log(allIds);
+
+// Log changes to debug
+// console.log(classes.innerHTML); // <p class="text">Updated Text!</p>
+
+// // state = newStateFromInput(state, addAxe);
+// // state = newStateFromInput(state, addSword);
+// const rep = rulesToState(rules);
+// console.log(rep);
+// console.log(rulesToState(stateToRules(rep)));
+
+// const addWizard = {id : "Classes", selection : "Classes.Wizard", content : true};
+// const addWarrior = {id : "Classes", selection : "Classes.Warrior", content : true};
+// const addAxe = {id : "Items", selection : "Items.Axe", content : true};
+// const addSword = {id : "Items", selection : "Items.Sword", content : true};
+// const addFireball = {id : "Items", selection : "Spells.Fireball", content : true};
+
+// let state = newStateFromInput(rep, addWarrior);
+// state = newStateFromInput(state, addFireball);
+// state = newStateFromInput(state, addAxe);
+
+// console.log(getChildren("Classes", state));
+
+// console.log(rep);
+// console.log(state);
+// const violations = stateViolations(state);
+// console.log(violations);
