@@ -31,6 +31,7 @@ const rules = {
 	      _value : "" }
 };
 
+
 /**
  * Converts a rules dict to a two-fold nested form dict, e.g. {bar : {baz : {foo : 1}}} => {foo : {bar.baz : 1}} 
  *
@@ -105,7 +106,7 @@ function singleSelect(state, input){
 // TODO uff, DRY
 // updates _data
 function input(state, input){
-    state._active[input.selection] = input.content;
+    state._value[input.id] = input.content;
     return state;
 }
 
@@ -225,14 +226,8 @@ function renderMultiSelect(entity, state) {
             checkbox.checked = state._active[child] === true;
 
             // Add event listener for selection (checked) or deselection (unchecked)
-            checkbox.addEventListener("change", () => {
-                if (checkbox.checked) {
-		    stateChange({id : entity, selection : child, content : true});
-                } else {
-		    stateChange({id : entity, selection : child, content : false});
-
-                }
-            });
+            checkbox.addEventListener("change", () => { stateChange({id : entity, selection : child, content : checkbox.checked}); }
+            );
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
@@ -265,22 +260,27 @@ function renderOutput(entity, state) {
     outputElement.textContent = state._value?.[entity];
 }
 
-function renderInput(entity, state) {
+function renderInput(entity, state, callback) {
     let inputElement = document.getElementById(entity);
+
     if (!inputElement) {
-	const labelElement = document.createElement("label");
+        const labelElement = document.createElement("label");
         labelElement.innerText = `${entity}: `;
-        labelElement.setAttribute("for", entity);	
-	
+        labelElement.setAttribute("for", entity);
+
         inputElement = document.createElement("input");
         inputElement.id = entity;
         inputElement.type = "text";
         inputElement.value = state._value?.[entity];
+	
+        document.body.appendChild(labelElement); // Append label first
+        document.body.appendChild(inputElement); // or append it to a specific container
 
-	document.body.appendChild(labelElement);  // Append label first
-        document.body.appendChild(inputElement);  // or append it to a specific container
-
-    } 
+	// Add event listener to call the callback function on input change
+        inputElement.addEventListener("change", (event) => {
+	    stateChange({id : entity, selection : "", content : event.target.value});
+        });
+    }
 }
 
 // computes new HTML
@@ -292,8 +292,13 @@ function render(state){
 }
 
 function stateChange(input){
-    globalThis.state = newStateFromInput(globalThis.state, input);
-    render(globalThis.state);
+    const newState = newStateFromInput(structuredClone(globalThis.state), input);
+    const violations = stateViolations(newState);
+    if (violations) alert(violations);
+    else{
+	globalThis.state = newState;
+	render(globalThis.state);
+    }
 }
 
 globalThis.onload = function() {
@@ -301,3 +306,4 @@ globalThis.onload = function() {
 };
 
 globalThis.state = rulesToState(rules);
+
