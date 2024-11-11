@@ -1,0 +1,114 @@
+/* Base setup */
+body {
+    font-family: 'Garamond', serif;
+    color: #333;
+    background-color: #f9f4e8; /* Parchment-style background */
+    margin: 0;
+    padding: 20px;
+}
+
+/* Character sheet container */
+#character-sheet {
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff5e6; /* Light parchment look */
+    border: 3px solid #8b5e3c;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Titles and labels */
+h1, h2, label {
+    font-family: 'Georgia', serif;
+    color: #4a2f24;
+    font-weight: bold;
+}
+
+h1 {
+    font-size: 2em;
+    text-align: center;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #8b5e3c;
+}
+
+/* Select and checkbox styles */
+select, input[type="checkbox"] {
+    margin: 10px;
+    padding: 8px;
+    background: #fff5e6;
+    border: 1px solid #8b5e3c;
+    border-radius: 4px;
+}
+
+/* Container for each stat or selection area */
+div[data-section] {
+    padding: 10px 0;
+    border-bottom: 1px solid #8b5e3c;
+}
+
+/* Spell or Item checkboxes */
+input[type="checkbox"] + label {
+    display: inline-block;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: #4a2f24;
+}
+
+/* Buttons */
+button {
+    padding: 8px 15px;
+    font-family: 'Garamond', serif;
+    color: #fff;
+    background-color: #8b5e3c;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+    background-color: #734a2b;
+}
+
+/* Input fields */
+input[type="text"], select {
+    padding: 8px;
+    width: 100%;
+    max-width: 300px;
+    font-family: 'Garamond', serif;
+}
+
+/* Output text */
+p {
+    font-size: 1.1em;
+    color: #4a2f24;
+    padding: 10px 0;
+}
+
+label {
+    font-size: 1.1em;
+}
+
+/* Output text container */
+output {
+    font-weight: bold;
+    color: #4a2f24;
+}
+
+/* Add custom scrollbar for better immersion */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1e2d3;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #8b5e3c;
+    border-radius: 10px;
+    border: 2px solid #f1e2d3;
+}
