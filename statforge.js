@@ -1,7 +1,4 @@
-// TODO:
-// rendering
-// deselect!
-// work around or implement this case: updates should be executed recursively if there are multiple derived values, e.g. something adds an item which adds an item, ...
+// mention: derived values *must not* depend on other derived values
 // eval => DSL
 
 // example input: components (entities) are (non-)leaf keys. systems are indicated by reserved kewords starting with "_".
@@ -96,6 +93,11 @@ function multiSelect(state, input){
 
 // updates _data
 function singleSelect(state, input){
+    for (const subEntity of Object.keys(state._active)){
+	if (subEntity.startsWith(input.id) && subEntity.length > input.id.length){
+	    state._active[subEntity] = false;
+	}
+    }
     state._active[input.selection] = input.content;
     return state;
 }
@@ -128,6 +130,7 @@ function update(state){
 	acc[key] = eval(value);
 	return acc;
     }, {});
+
 
     // TODO: return updates separately for rendering
     const newValue = {...state._value, ...update};
@@ -171,6 +174,7 @@ function getChildren(entity, state){
 }
 
 function renderSingleSelect(entity, state) {
+
     let selectElement = document.getElementById(entity);
     if (!selectElement) {
         selectElement = document.createElement("select");
@@ -195,6 +199,13 @@ function renderSingleSelect(entity, state) {
             selectElement.appendChild(option);
         });
 
+        // Attach the callback to the 'change' event of the select element
+        selectElement.addEventListener("change",
+				       () => {
+					   stateChange({id : entity, selection : selectElement.options[selectElement.selectedIndex].value, content : true});
+				       }
+				      );
+
         document.body.appendChild(selectElement);  // or append it to a specific container
     }
 }
@@ -212,6 +223,16 @@ function renderMultiSelect(entity, state) {
             checkbox.id = child;
             checkbox.value = child;
             checkbox.checked = state._active[child] === true;
+
+            // Add event listener for selection (checked) or deselection (unchecked)
+            checkbox.addEventListener("change", () => {
+                if (checkbox.checked) {
+		    stateChange({id : entity, selection : child, content : true});
+                } else {
+		    stateChange({id : entity, selection : child, content : false});
+
+                }
+            });
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
@@ -231,15 +252,17 @@ function renderOutput(entity, state) {
 	const labelElement = document.createElement("label");
         labelElement.innerText = `${entity}: `;
         labelElement.setAttribute("for", entity);	
-	
-        outputElement = document.createElement("p");
-        outputElement.id = entity;
-        outputElement.textContent = state._value?.[entity];
-	console.log(entity);
 
-        document.body.appendChild(outputElement);  // or append it to a specific container
-	document.body.appendChild(labelElement);  // Append label first
+	const container = document.createElement("p");
+        outputElement = document.createElement("span");
+        outputElement.id = entity;
+
+	document.body.appendChild(container);  // or append it to a specific container
+	container.appendChild(labelElement);  // Append label first
+        container.appendChild(outputElement);  // or append it to a specific container
+	
     }
+    outputElement.textContent = state._value?.[entity];
 }
 
 function renderInput(entity, state) {
@@ -268,67 +291,13 @@ function render(state){
     });
 }
 
-function setup(){
-    const state = rulesToState(rules);
-    render(state);
+function stateChange(input){
+    globalThis.state = newStateFromInput(globalThis.state, input);
+    render(globalThis.state);
 }
 
-const { JSDOM } = require("jsdom");
+globalThis.onload = function() {
+    render(globalThis.state);
+};
 
-// Load an HTML structure
-const dom = new JSDOM(`
-  <!DOCTYPE html>
-  <html>
-    <body>
-      <div id="container">
-        <p class="text">Hello, World!</p>
-      </div>
-    </body>
-  </html>
-`);
-
-// Access and manipulate DOM elements
-// const document = dom.window.document;
-// const container = document.getElementById("container");
-// const textElement = container.querySelector(".text");
-
-// const state = rulesToState(rules);
-// render(state);
-
-// const classes = document.getElementById("Classes");
-// console.log(classes);
-
-// const allElements = document.getElementsByTagName("*");
-
-// // Filter elements that have an ID attribute and collect their IDs
-// const allIds = Array.from(allElements)
-//   .filter(element => element.id) // Keep elements with a non-empty ID
-//   .map(element => element.id);   // Map to the ID values
-
-// console.log(allIds);
-
-// Log changes to debug
-// console.log(classes.innerHTML); // <p class="text">Updated Text!</p>
-
-// // state = newStateFromInput(state, addAxe);
-// // state = newStateFromInput(state, addSword);
-// const rep = rulesToState(rules);
-// console.log(rep);
-// console.log(rulesToState(stateToRules(rep)));
-
-// const addWizard = {id : "Classes", selection : "Classes.Wizard", content : true};
-// const addWarrior = {id : "Classes", selection : "Classes.Warrior", content : true};
-// const addAxe = {id : "Items", selection : "Items.Axe", content : true};
-// const addSword = {id : "Items", selection : "Items.Sword", content : true};
-// const addFireball = {id : "Items", selection : "Spells.Fireball", content : true};
-
-// let state = newStateFromInput(rep, addWarrior);
-// state = newStateFromInput(state, addFireball);
-// state = newStateFromInput(state, addAxe);
-
-// console.log(getChildren("Classes", state));
-
-// console.log(rep);
-// console.log(state);
-// const violations = stateViolations(state);
-// console.log(violations);
+globalThis.state = rulesToState(rules);
