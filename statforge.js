@@ -1,6 +1,3 @@
-// mention: derived values *must not* depend on other derived values
-// eval => DSL
-
 /**
  * Converts a rules dict to a two-fold nested form dict, e.g. {bar : {baz : {foo : 1}}} => {foo : {bar.baz : 1}} 
  *

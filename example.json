@@ -1,4 +1,21 @@
 {
+    "Name": {
+        "_active": true,
+        "_kind": "Input",
+        "_value": ""
+    },
+    "MagicPower": {
+        "_derivation": "sumActive(state, 'MagicPower')",
+        "_kind": "Output",
+        "_active": true,
+        "_value": ""
+    },
+    "Points": {
+        "_derivation": "sumActive(state, 'Points')",
+        "_kind": "Output",
+        "_active": true,
+        "_value": ""
+    },
     "Classes": {
         "Wizard": {
             "Points": 10,
@@ -34,22 +51,5 @@
         },
         "_kind": "MultiSelect",
         "_active": true
-    },
-    "Name": {
-        "_active": true,
-        "_kind": "Input",
-        "_value": ""
-    },
-    "MagicPower": {
-        "_derivation": "sumActive(state, 'MagicPower')",
-        "_kind": "Output",
-        "_active": true,
-        "_value": ""
-    },
-    "Points": {
-        "_derivation": "sumActive(state, 'Points')",
-        "_kind": "Output",
-        "_active": true,
-        "_value": ""
     }
 }
