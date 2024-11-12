@@ -292,3 +292,28 @@ function downloadState() {
     URL.revokeObjectURL(url);
 }
 
+// Function to load example JSON and populate the input container
+async function loadExampleJson() {
+    try {
+        // Fetch the example JSON file
+        const response = await fetch("./example.json"); // Use the correct path to example.json
+        if (!response.ok) {
+            throw new Error("Failed to load example.json");
+        }
+        const exampleJson = await response.json();
+
+        // Convert the JSON object to a formatted string
+        const jsonText = JSON.stringify(exampleJson, null, 2);
+
+        // Set the JSON text into the input area
+        const jsonInput = document.getElementById("json-input");
+        jsonInput.value = jsonText;
+
+        // Optionally, show the input container if it's hidden
+        const inputContainer = document.getElementById("json-input-container");
+        inputContainer.style.display = "block";
+    } catch (error) {
+        console.error("Error loading example JSON:", error);
+        alert("Could not load example JSON.");
+    }
+}
