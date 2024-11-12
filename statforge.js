@@ -86,35 +86,24 @@ function deepMerge(target, source) {
     return { ...target, ...source };
 }
 
-// appends to _data
-function multiSelect(state, input){
-    state._active[input.selection] = input.content;
-    return state;
-}
-
-// updates _data
-function singleSelect(state, input){
-    for (const subEntity of Object.keys(state._active)){
-	if (subEntity.startsWith(input.id) && subEntity.length > input.id.length){
-	    state._active[subEntity] = false;
-	}
+const inputHandlers = {
+    "MultiSelect": (state, input) => {
+        state._active[input.selection] = input.content;
+        return state;
+    },
+    "SingleSelect": (state, input) => {
+        Object.keys(state._active).forEach(subEntity => {
+            if (subEntity.startsWith(input.id) && subEntity.length > input.id.length) {
+                state._active[subEntity] = false;
+            }
+        });
+        state._active[input.selection] = input.content;
+        return state;
+    },
+    "Input": (state, input) => {
+        state._value[input.id] = input.content;
+        return state;
     }
-    state._active[input.selection] = input.content;
-    return state;
-}
-
-// TODO uff, DRY
-// updates _data
-function input(state, input){
-    state._value[input.id] = input.content;
-    return state;
-}
-
-// maps fields to user input to decide which function to call on which input
-const userInputTable = {
-    "MultiSelect" : multiSelect,
-    "SingleSelect" : singleSelect,
-    "Input" : input,
 };
 
 // sum all active components
@@ -141,7 +130,7 @@ function update(state){
 // returns updated state
 function newStateFromInput(state, input){
     const value = state._kind[input.id] ?? "";
-    const updateInput = userInputTable[value];
+    const updateInput = inputHandlers[value];
     
     return update(updateInput(state, input));
 }
