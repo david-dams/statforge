@@ -1,0 +1,55 @@
+{
+    "Classes": {
+        "Wizard": {
+            "Points": 10,
+            "MagicPower": 20
+        },
+        "Warrior": {
+            "Points": 2,
+            "MagicPower": 2
+        },
+        "_kind": "SingleSelect",
+        "_active": true
+    },
+    "Spells": {
+        "Fireball": {
+            "MagicPower": -10,
+            "_requires": "state._active['Classes.Wizard']===true"
+        },
+        "Whirlwind": {
+            "MagicPower": -2
+        },
+        "_kind": "MultiSelect",
+        "_active": true
+    },
+    "Items": {
+        "Axe": {
+            "Gold": 10,
+            "Integrity": 15,
+            "_requires": "state._active['Items.Sword'] === true"
+        },
+        "Sword": {
+            "Gold": 15,
+            "Integrity": 15
+        },
+        "_kind": "MultiSelect",
+        "_active": true
+    },
+    "Name": {
+        "_active": true,
+        "_kind": "Input",
+        "_value": ""
+    },
+    "MagicPower": {
+        "_derivation": "sumActive(state, 'MagicPower')",
+        "_kind": "Output",
+        "_active": true,
+        "_value": ""
+    },
+    "Points": {
+        "_derivation": "sumActive(state, 'Points')",
+        "_kind": "Output",
+        "_active": true,
+        "_value": ""
+    }
+}

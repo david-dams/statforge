@@ -1,37 +1,6 @@
 // mention: derived values *must not* depend on other derived values
 // eval => DSL
 
-// example input: components (entities) are (non-)leaf keys. systems are indicated by reserved kewords starting with "_".
-const rules = {
-    Classes : {Wizard : {Points : 10, MagicPower : 20},
-	       Warrior : {Points : 2, MagicPower : 2},
-	       _kind : "SingleSelect", // kind of field: (type of) input of value of output
-	       _active : true,
-	      },
-    Spells : {Fireball : {MagicPower : -10, _requires : "state._active['Classes.Wizard']===true"},
-	      Whirlwind : {MagicPower : -2},	     
-	      _kind : "MultiSelect",
-	      _active : true
-	     },
-    Items : {Axe : {Gold : 10, Integrity : 15, _requires : "state._active['Items.Sword'] === true"},
-	     Sword : {Gold : 15, Integrity : 15},
-	     _kind : "MultiSelect",
-	     _active : true},
-    Name : {_active : true,
-	    _kind : "Input",
-	    _value : ""
-	   },
-    MagicPower : {_derivation : "sumActive(state, 'MagicPower')",
-		  _kind : "Output",
-		  _active : true,
-		  _value : "" },
-    Points : {_derivation : "sumActive(state, 'Points')",
-	      _kind : "Output",
-	      _active : true,
-	      _value : "" }
-};
-
-
 /**
  * Converts a rules dict to a two-fold nested form dict, e.g. {bar : {baz : {foo : 1}}} => {foo : {bar.baz : 1}} 
  *
@@ -216,7 +185,7 @@ function renderMultiSelect(entity, state) {
 
             // Add event listener for selection (checked) or deselection (unchecked)
             checkbox.addEventListener("change", () => { stateChange({id : entity, selection : child, content : checkbox.checked}); }
-            );
+				     );
 
             const label = document.createElement("label");
             label.htmlFor = checkbox.id;
@@ -290,9 +259,39 @@ function stateChange(input){
     }
 }
 
-globalThis.onload = function() {
-    render(globalThis.state);
-};
+// Function to toggle the JSON input area visibility
+function toggleJsonInput() {
+    const inputContainer = document.getElementById("json-input-container");
+    inputContainer.style.display = inputContainer.style.display === "none" ? "block" : "none";
+}
 
-globalThis.state = rulesToState(rules);
+// Function to handle JSON submission from the text area
+function submitJson() {
+    const jsonInput = document.getElementById("json-input").value;
+
+    try {
+	const rules = JSON.parse(jsonInput);
+	globalThis.state = rulesToState(rules);
+	render(globalThis.state);
+    } catch (error) {
+	alert("Invalid JSON format. Please correct it and try again.");
+	console.error("Error parsing JSON:", error);
+    }
+}
+
+// Function to download the current state as a JSON file
+function downloadState() {
+    const stateJSON = JSON.stringify(stateToRules(globalThis.state), null, 2);
+    const blob = new Blob([stateJSON], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary link to trigger download
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "state.json";
+    a.click();
+
+    // Clean up the URL object
+    URL.revokeObjectURL(url);
+}
 

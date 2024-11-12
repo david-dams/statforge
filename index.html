@@ -3,11 +3,32 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StatForge Setup</title>
+    <title>StatForge</title>
     <link rel="stylesheet" href="styles.css">
     <script src="statforge.js?v=<?= time() ?>"></script>
   </head>
   <body>
-    <h1>Welcome to StatForge</h1>
+    <h1>StatForge</h1>
+
+    <!-- Button to toggle the text input area -->
+    <button id="toggle-input">Toggle Rules</button>
+
+    <!-- Collapsible JSON text input area, initially hidden -->
+    <div id="json-input-container" style="display: none;">
+      <textarea id="json-input" rows="10" cols="50" placeholder="Paste JSON rules here..."></textarea>
+      <br>
+      <button id="submit-json">Create Character Sheet</button>
+    </div>
+
+    <!-- Button to download the current state as JSON -->
+    <p>
+      <button id="download">Download Character Sheet</button>
+    </p>
+    <script>
+      // Set up the toggle and download buttons
+      document.getElementById("toggle-input").addEventListener("click", toggleJsonInput);
+      document.getElementById("submit-json").addEventListener("click", submitJson);
+      document.getElementById("download").addEventListener("click", downloadState);
+    </script>
   </body>
 </html>
